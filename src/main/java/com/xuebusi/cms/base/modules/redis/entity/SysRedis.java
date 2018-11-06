@@ -41,6 +41,8 @@ public class SysRedis extends DataEntity<SysRedis> implements Comparable<SysRedi
     private String hashKey;             // 仅hash类型有效
     private Map<String, Object> valMap; // map类型的value
 
+    private Long elCount;             // 集合元素总数
+
     public static class ScoreVal {
         private String score;
         private String value;
@@ -193,6 +195,14 @@ public class SysRedis extends DataEntity<SysRedis> implements Comparable<SysRedi
 
     public void setZsetList(List<ScoreVal> zsetList) {
         this.zsetList = zsetList;
+    }
+
+    public Long getElCount() {
+        return elCount;
+    }
+
+    public void setElCount(Long elCount) {
+        this.elCount = elCount;
     }
 
     /**

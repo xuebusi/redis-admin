@@ -36,7 +36,21 @@
             });
         });
 
-        // 修改redis缓存名称
+        var redis = {
+            URL: {
+                updateRedisKeyForm: function (dataType, oldRedisKey, redisKey) {
+                    return '/redis/sysRedis/rename?oldRedisKey=' + oldRedisKey + '&redisKey=' + redisKey;
+                },
+                updateExpireForm: function (dataType, redisKey, expire) {
+                    return '/redis/sysRedis/updateExpire?dataType=' + dataType + '&redisKey=' + redisKey + '&expire=' + expire;
+                },
+                addValueForm: function (dataType, redisKey, redisValue, fromLeft, hashKey, score) {
+                    return '/redis/sysRedis/addValue?dataType=' + dataType + '&redisKey=' + redisKey + '&redisValue=' + redisValue + '&fromLeft=' + fromLeft + '&hashKey=' + hashKey + '&score=' + score;
+                }
+            }
+        }
+
+        // 修改名称
         var updateRedisKey = function (a) {
             var dataType = $('#dataType').val();
             var oldRedisKey = $('#oldRedisKey').val();
@@ -45,38 +59,45 @@
             a.href = '${ctx}/' + url;
         }
 
-        // 更新redis缓存过期时间
+        // 更新过期时间
         var updateExpire = function (a) {
             var dataType = $('#dataType').val();
-            var oldRedisKey = $('#oldRedisKey').val();
+            var redisKey = $('#oldRedisKey').val();
             var expire = $('#expire').val();
-            var url = redis.URL.updateExpireForm(dataType, oldRedisKey, expire);
+            var url = redis.URL.updateExpireForm(dataType, redisKey, expire);
             a.href = '${ctx}/' + url;
         }
 
-        // 修改redis缓存值
+        // 修改缓存值
         var updateRedisValue = function (a, fromLeft) {
             var dataType = $('#dataType').val();
-            var oldRedisKey = $('#oldRedisKey').val();
+            var redisKey = $('#oldRedisKey').val();
             var redisValue = '';
             var hashKey = '';
             var score = 0;
-            if (dataType == 'string') {
-                redisValue = $('#redisValue').val();
-            } else if (dataType == 'list') {
-                redisValue = $('#listRedisValue').val();
-            } else if (dataType == 'set') {
-                redisValue = $('#setRedisValue').val();
-            } else if (dataType == 'zset') {
-                redisValue = $('#zsetRedisValue').val();
-                score = $('#score').val();
-            } else if (dataType == 'hash') {
-                hashKey = $('#hashKey').val();
-                redisValue = $('#hashValue').val();
-            } else {
-                alert("00000000")
+            switch (dataType) {
+                case 'string':
+                    redisValue = $('#redisValue').val();
+                    break;
+                case 'list':
+                    redisValue = $('#listRedisValue').val();
+                    break;
+                case 'set':
+                    redisValue = $('#setRedisValue').val();
+                    break;
+                case 'zset':
+                    redisValue = $('#zsetRedisValue').val();
+                    score = $('#score').val();
+                    break;
+                case 'hash':
+                    hashKey = $('#hashKey').val();
+                    redisValue = $('#hashValue').val();
+                    break;
+                default:
+                    alert('未知的数据类型')
+                    break;
             }
-            var url = redis.URL.updateRedisValueForm(dataType, oldRedisKey, redisValue, fromLeft, hashKey, score);
+            var url = redis.URL.addValueForm(dataType, redisKey, redisValue, fromLeft, hashKey, score);
             a.href = '${ctx}/' + url;
         }
     </script>
@@ -89,13 +110,13 @@
             name="redis:sysRedis:edit">查看</shiro:lacksPermission>缓存</a></li>
 </ul>
 <br/>
+<sys:message content="${message}"/>
 <c:choose>
     <%--如果没有数据类型--%>
     <c:when test="${empty sysRedis.dataType}">
         <form:form id="inputForm" modelAttribute="sysRedis" action="${ctx}/redis/sysRedis/form" method="post"
                    class="form-horizontal">
             <form:hidden path="id"/>
-            <sys:message content="${message}"/>
             <div class="control-group">
                 <label class="control-label">数据类型:</label>
                 <div class="controls">
@@ -135,7 +156,7 @@
                     <form:input id="redisKey" path="redisKey" htmlEscape="false" maxlength="200"
                                 class="input-xlarge required"/>
                     <c:if test="${not empty sysRedis.redisKey}">
-                        <a class="btn" onclick="updateRedisKey(this)">修改名称</a>
+                        <a id="updateRedisKey" class="btn" onclick="updateRedisKey(this)">修改名称</a>
                     </c:if>
                 </div>
             </div>
@@ -194,10 +215,11 @@
                         <div class="control-group">
                             <label class="control-label">Value：</label>
                             <div class="controls">
-                                <form:input id="listRedisValue" path="redisValue" htmlEscape="false" maxlength="200" class="input-xlarge"/>
+                                <form:input id="listRedisValue" path="redisValue" htmlEscape="false" maxlength="200"
+                                            class="input-xlarge"/>
                                 <c:if test="${not empty sysRedis.redisKey}">
-                                    <a class="btn" onclick="updateRedisValue(this, 1)">从左侧(头部)添加</a>
-                                    <a class="btn" onclick="updateRedisValue(this, 0)">从右侧(尾部)添加</a>
+                                    <a class="btn" onclick="updateRedisValue(this, 0)">从右侧(尾)添加</a>
+                                    <a class="btn" onclick="updateRedisValue(this, 1)">从左侧(头)添加</a>
                                 </c:if>
                             </div>
                         </div>
@@ -216,7 +238,9 @@
                                         <tr>
                                             <td style="width: 10px">${status.index}</td>
                                             <td>${val}</td>
-                                            <td><a href="${ctx}/redis/sysRedis/deleteListValue?dataType=${sysRedis.dataType}&oldRedisKey=${sysRedis.redisKey}&currentIndex=${status.index}&redisValue=${val}" onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
+                                            <td>
+                                                <a href="${ctx}/redis/sysRedis/remove?dataType=${sysRedis.dataType}&redisKey=${sysRedis.redisKey}&currentIndex=${status.index}&redisValue=${val}"
+                                                   onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
                                         </tr>
                                     </c:forEach>
                                     </tbody>
@@ -268,7 +292,9 @@
                                         <tr>
                                             <td style="width: 10px">${status.index}</td>
                                             <td>${val}</td>
-                                            <td><a href="${ctx}/redis/sysRedis/deleteSetValue?dataType=${sysRedis.dataType}&oldRedisKey=${sysRedis.redisKey}&redisValue=${val}" onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
+                                            <td>
+                                                <a href="${ctx}/redis/sysRedis/remove?dataType=${sysRedis.dataType}&redisKey=${sysRedis.redisKey}&redisValue=${val}"
+                                                   onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
                                         </tr>
                                     </c:forEach>
                                     </tbody>
@@ -309,7 +335,7 @@
                                     <form:input id="zsetRedisValue" path="redisValue" htmlEscape="false" maxlength="200"
                                                 class="input-xlarge"/>
                                     得分：<form:input id="score" path="score" htmlEscape="false" maxlength="200"
-                                                class="input-xlarge"/>
+                                                   class="input-xlarge"/>
                                     <c:if test="${not empty sysRedis.redisKey}">
                                         <a class="btn" onclick="updateRedisValue(this)">添加值</a>
                                     </c:if>
@@ -333,7 +359,9 @@
                                             <td style="width: 10px">${status.index}</td>
                                             <td>${val.value}</td>
                                             <td>${val.score}</td>
-                                            <td><a href="${ctx}/redis/sysRedis/deleteZSetValue?dataType=${sysRedis.dataType}&oldRedisKey=${sysRedis.redisKey}&redisValue=${val.value}" onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
+                                            <td>
+                                                <a href="${ctx}/redis/sysRedis/remove?dataType=${sysRedis.dataType}&redisKey=${sysRedis.redisKey}&redisValue=${val.value}"
+                                                   onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
                                         </tr>
                                     </c:forEach>
                                     </tbody>
@@ -369,9 +397,11 @@
                         <div class="control-group">
                             <label class="control-label">Hash键：</label>
                             <div class="controls">
-                                <form:input id="hashKey" path="hashKey" htmlEscape="false" maxlength="200" class="input-xlarge required"/>
+                                <form:input id="hashKey" path="hashKey" htmlEscape="false" maxlength="200"
+                                            class="input-xlarge required"/>
                                 <span>Hash值：</span>
-                                <form:input id="hashValue" path="redisValue" htmlEscape="false" class="input-xlarge required"/>
+                                <form:input id="hashValue" path="redisValue" htmlEscape="false"
+                                            class="input-xlarge required"/>
                                 <a class="btn" onclick="updateRedisValue(this)">添加值</a>
                                 <span class="help-inline"><font color="red">*</font> </span>
                             </div>
@@ -396,7 +426,9 @@
                                             <td>${status.index}</td>
                                             <td>${val.key}</td>
                                             <td>${val.value}</td>
-                                            <td><a href="${ctx}/redis/sysRedis/deleteHash?dataType=${sysRedis.dataType}&oldRedisKey=${sysRedis.redisKey}&hashKey=${val.key}" onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
+                                            <td>
+                                                <a href="${ctx}/redis/sysRedis/remove?dataType=${sysRedis.dataType}&redisKey=${sysRedis.redisKey}&hashKey=${val.key}"
+                                                   onclick="return confirmx('确认要删除该缓存吗？', this.href)">删除</a></td>
                                         </tr>
                                     </c:forEach>
                                     </tbody>
@@ -417,22 +449,5 @@
         </form:form>
     </c:otherwise>
 </c:choose>
-
-<script>
-    var redis = {
-        /**与服务端交互url*/
-        URL: {
-            updateRedisKeyForm: function (dataType, oldRedisKey, redisKey) {
-                return '/redis/sysRedis/updateRedisKey?dataType=' + dataType +'&oldRedisKey=' + oldRedisKey + '&redisKey=' + redisKey;
-            },
-            updateExpireForm: function (dataType, oldRedisKey, expire) {
-                return '/redis/sysRedis/updateExpire?dataType=' + dataType + '&oldRedisKey=' + oldRedisKey + '&expire=' + expire;
-            },
-            updateRedisValueForm: function (dataType, oldRedisKey, redisValue, fromLeft, hashKey, score) {
-                return '/redis/sysRedis/updateRedisValue?dataType=' + dataType + '&oldRedisKey=' + oldRedisKey + '&redisValue=' + redisValue + '&fromLeft=' + fromLeft + '&hashKey=' + hashKey+ '&score=' + score;
-            }
-        }
-    }
-</script>
 </body>
 </html>
