@@ -16,8 +16,8 @@ public class RedisService {
     @Autowired
     private RedisDao redisDao;
 
-    public SysRedis getByType(String key) {
-        return redisDao.getByType(key);
+    public SysRedis get(String key) {
+        return redisDao.get(key);
     }
 
     public Page<SysRedis> findPage(Page<SysRedis> page, SysRedis sysRedis) {

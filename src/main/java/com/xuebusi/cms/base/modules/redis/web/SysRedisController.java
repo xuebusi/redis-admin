@@ -36,7 +36,7 @@ public class SysRedisController extends BaseController {
         if (sysRedis == null) {
             sysRedis = new SysRedis();
         } else {
-            sysRedis = redisService.getByType(sysRedis.getRedisKey());
+            sysRedis = redisService.get(sysRedis.getRedisKey());
         }
         return sysRedis;
     }
@@ -54,7 +54,7 @@ public class SysRedisController extends BaseController {
     public String form(SysRedis sysRedis, Model model) {
         SysRedis entity = null;
         if (StringUtils.isNotBlank(sysRedis.getRedisKey())) {
-            entity = redisService.getByType(sysRedis.getRedisKey());
+            entity = redisService.get(sysRedis.getRedisKey());
         }
         if (entity == null) {
             model.addAttribute("sysRedis", sysRedis);

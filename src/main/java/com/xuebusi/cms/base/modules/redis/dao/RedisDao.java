@@ -10,7 +10,7 @@ import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-@Component
+@Repository
 public class RedisDao {
 
     @Autowired
@@ -31,13 +31,72 @@ public class RedisDao {
     @Qualifier("stringRedisTemplate")
     private StringRedisTemplate stringRedisTemplate;
 
+    public Page<SysRedis> findPage(Page<SysRedis> page, SysRedis sysRedis) {
+
+        // 设置页码
+        int pageNo = page.getPageNo();
+        int pageSize = page.getPageSize();
+        sysRedis.setPage(page);
+
+        Set<String> keySet;
+        if (StringUtils.isNotBlank(sysRedis.getRedisKey())) {
+            keySet = template.keys(sysRedis.getRedisKey());
+        } else {
+            keySet = template.keys("*");
+        }
+        List<String> keyList = new ArrayList<>(keySet);
+        page.setCount(keyList.size());
+        List<SysRedis> list = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(keyList)) {
+            int start = pageNo == 1 ? 0 : (pageNo - 1) * pageSize;
+            for (int i = start, j = 0; i < keyList.size() && j < pageSize; i++, j++) {
+                String key = keyList.get(i);
+                SysRedis base = this.baseInfo(key);
+                list.add(base);
+            }
+        }
+        page.setList(list);
+        return page;
+    }
 
     /**
-     * 根据数据类型进行查询
+     * 只查询元素总数及数据类型, 不查询元素值
+     *
+     * @param key
+     */
+    public SysRedis baseInfo(String key) {
+        DataType type = template.type(key);
+        Long expire = template.getExpire(key);
+        SysRedis sysRedis = new SysRedis(type.code(), key, null, String.valueOf(expire));
+        switch (type) {
+            case STRING:
+                sysRedis.setElCount(1L);
+                break;
+            case LIST:
+                sysRedis.setElCount(template.opsForList().size(key));
+                break;
+            case SET:
+                sysRedis.setElCount(template.opsForSet().size(key));
+                break;
+            case ZSET:
+                sysRedis.setElCount(template.opsForZSet().size(key));
+                break;
+            case HASH:
+                sysRedis.setElCount(template.opsForHash().size(key));
+                break;
+            default:
+                break;
+        }
+        return sysRedis;
+    }
+
+
+    /**
+     * 根据数据类型进行查询元素值
      *
      * @param key 缓存key
      */
-    public SysRedis getByType(String key) {
+    public SysRedis get(String key) {
         DataType type = template.type(key);
         Long expire = template.getExpire(key);
         SysRedis sysRedis = new SysRedis(type.code(), key, null, String.valueOf(expire));
@@ -77,34 +136,6 @@ public class RedisDao {
                 break;
         }
         return sysRedis;
-    }
-
-    public Page<SysRedis> findPage(Page<SysRedis> page, SysRedis sysRedis) {
-
-        // 设置页码
-        int pageNo = page.getPageNo();
-        int pageSize = page.getPageSize();
-        sysRedis.setPage(page);
-
-        Set<String> keySet;
-        if (StringUtils.isNotBlank(sysRedis.getRedisKey())) {
-            keySet = template.keys(sysRedis.getRedisKey());
-        } else {
-            keySet = template.keys("*");
-        }
-        List<String> keyList = new ArrayList<>(keySet);
-        page.setCount(keyList.size());
-        List<SysRedis> list = new ArrayList<>();
-        if (!CollectionUtils.isEmpty(keyList)) {
-            int start = pageNo == 1 ? 0 : (pageNo - 1) * pageSize;
-            for (int i = start, j = 0; i < keyList.size() && j < pageSize; i++, j++) {
-                String key = keyList.get(i);
-                SysRedis newSysRedis = this.getByType(key);
-                list.add(newSysRedis);
-            }
-        }
-        page.setList(list);
-        return page;
     }
 
     /**
