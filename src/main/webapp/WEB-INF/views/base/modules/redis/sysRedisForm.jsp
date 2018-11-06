@@ -97,8 +97,23 @@
                     alert('未知的数据类型')
                     break;
             }
-            var url = redis.URL.addValueForm(dataType, redisKey, redisValue, fromLeft, hashKey, score);
-            a.href = '${ctx}/' + url;
+
+            $.ajax({
+                type: "post",
+                url: '${ctx}/redis/sysRedis/addValue',
+                data: {
+                    dataType: dataType,
+                    redisKey: redisKey,
+                    redisValue: redisValue,
+                    fromLeft: fromLeft,
+                    hashKey: hashKey,
+                    score: score
+                },
+                success:function(data) {
+                    alert(data.message)
+                    window.location.reload();
+                }
+            });
         }
     </script>
 </head>
@@ -215,11 +230,10 @@
                         <div class="control-group">
                             <label class="control-label">Value：</label>
                             <div class="controls">
-                                <form:input id="listRedisValue" path="redisValue" htmlEscape="false" maxlength="200"
-                                            class="input-xlarge"/>
+                                <form:textarea id="listRedisValue" path="redisValue" htmlEscape="false" rows="2" class="input-xlarge required"/>
                                 <c:if test="${not empty sysRedis.redisKey}">
-                                    <a class="btn" onclick="updateRedisValue(this, 0)">从右侧(尾)添加</a>
-                                    <a class="btn" onclick="updateRedisValue(this, 1)">从左侧(头)添加</a>
+                                    <a class="btn" onclick="updateRedisValue(this, 0)">从尾(R)添加</a>
+                                    <a class="btn" onclick="updateRedisValue(this, 1)">从头(L)添加</a>
                                 </c:if>
                             </div>
                         </div>
@@ -269,8 +283,7 @@
                             <div class="control-group">
                                 <label class="control-label">Value：</label>
                                 <div class="controls">
-                                    <form:input id="setRedisValue" path="redisValue" htmlEscape="false" maxlength="200"
-                                                class="input-xlarge"/>
+                                    <form:input id="setRedisValue" path="redisValue" htmlEscape="false" class="input-xlarge"/>
                                     <c:if test="${not empty sysRedis.redisKey}">
                                         <a class="btn" onclick="updateRedisValue(this)">添加值</a>
                                     </c:if>
@@ -332,10 +345,8 @@
                             <div class="control-group">
                                 <label class="control-label">值：</label>
                                 <div class="controls">
-                                    <form:input id="zsetRedisValue" path="redisValue" htmlEscape="false" maxlength="200"
-                                                class="input-xlarge"/>
-                                    得分：<form:input id="score" path="score" htmlEscape="false" maxlength="200"
-                                                   class="input-xlarge"/>
+                                    <form:input id="zsetRedisValue" path="redisValue" htmlEscape="false" class="input-xlarge"/>
+                                    得分：<form:input id="score" path="score" htmlEscape="false" maxlength="200" class="input-xlarge"/>
                                     <c:if test="${not empty sysRedis.redisKey}">
                                         <a class="btn" onclick="updateRedisValue(this)">添加值</a>
                                     </c:if>

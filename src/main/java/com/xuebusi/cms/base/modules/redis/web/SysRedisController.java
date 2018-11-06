@@ -13,10 +13,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 缓存管理Controller
@@ -114,10 +117,13 @@ public class SysRedisController extends BaseController {
 
     @RequiresPermissions("redis:sysRedis:edit")
     @RequestMapping(value = "addValue")
-    public String addValue(SysRedis sysRedis, RedirectAttributes redirectAttributes) {
+    @ResponseBody
+    public Map<String, Object> addValue(SysRedis sysRedis, RedirectAttributes redirectAttributes) {
         redisService.addValue(sysRedis);
-        redirectAttributes.addAttribute("redisKey", sysRedis.getRedisKey());
-        addMessage(redirectAttributes, "元素更新成功");
-        return "redirect:" + Global.getAdminPath() + "/redis/sysRedis/form?repage";
+        Map<String, Object> map = new HashMap<>();
+        map.put("redisKey", sysRedis.getRedisKey());
+        map.put("message", "元素更新成功");
+        map.put("redirectUrl", "/redis/sysRedis/form");
+        return map;
     }
 }
